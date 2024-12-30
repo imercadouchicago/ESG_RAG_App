@@ -1,12 +1,12 @@
 import os
 import streamlit as st
 
-from preprocessing import process_uploaded_document
-from retriever import add_to_vector_collection, query_collection
-from reranking import re_rank_cross_encoders
-from generator import call_llm
+from rag_app.preprocessing import process_uploaded_document
+from rag_app.retriever import add_to_vector_collection, query_collection
+from rag_app.reranking import re_rank_cross_encoders
+from rag_app.generator import call_llm
 
-data_dir_path = os.environ.get(DATA_DIR_PATH)
+DATA_DIR_PATH = os.environ["DATA_DIR_PATH"]
 
 # Document Upload Area
 with st.sidebar:
@@ -15,7 +15,7 @@ with st.sidebar:
     process = st.button("Process")
 
     if uploaded_file and process:
-        indexed_chunk = process_uploaded_document(uploaded_file, data_dir_path)
+        indexed_chunk = process_uploaded_document(uploaded_file, DATA_DIR_PATH)
         count = add_to_vector_collection(indexed_chunk)
         st.success(f"Data added to vector database! Collection size: {count}")
 

@@ -1,14 +1,17 @@
-version: '3.8'
-
+name: streamlit-ollama
 services:
   streamlit:
     build: .
     ports:
       - "8501:8501"
+    networks:
+      - internal-net
     volumes:
       - .:/app/src
     environment:
       DATA_DIR_PATH: /app/src/data
+      OLLAMA_HOST: http://ollama:11434
+    mem_limit: 4g
     depends_on:
       - ollama
 
@@ -16,8 +19,21 @@ services:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
+    networks:
+      - internal-net
     volumes:
-      - ollama_data:/root/.ollama
+      - ollama_models:/root/.ollama/models
+
+  ollama-gpu:
+    profiles:
+      - gpu
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    networks:
+      - internal-net
+    volumes:
+      - ollama_models:/root/.ollama/models
     deploy:
       resources:
         reservations:
@@ -26,5 +42,9 @@ services:
               count: all
               capabilities: [gpu]
 
+networks:
+  internal-net:
+    driver: bridge
+
 volumes:
-  ollama_data
+  ollama_models:

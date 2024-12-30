@@ -1,8 +1,9 @@
-
+import os
+import requests
 import chromadb
-from chromadb.utils.embedding_functions.ollama_embedding_function import (
-    OllamaEmbeddingFunction,
-)
+from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
+
+OLLAMA_HOST = os.environ["OLLAMA_HOST"]
 
 def get_vector_collection() -> chromadb.Collection:
     """Gets or creates a ChromaDB collection for vector storage.
@@ -15,10 +16,22 @@ def get_vector_collection() -> chromadb.Collection:
         chromadb.Collection: A ChromaDB collection configured with the Ollama embedding
             function and cosine similarity space.
     """
+    # Test basic connectivity first
+    try:
+        response = requests.post(
+            f"{OLLAMA_HOST}/api/embeddings",
+            json={"model": "nomic-embed-text", "prompt": "test"}
+        )
+        print(f"Raw API response: {response.text}")
+        if not response.ok:
+            raise ValueError(f"Ollama API error: {response.status_code} - {response.text}")
+    except Exception as e:
+        raise ValueError(f"Connection to Ollama failed: {e}")
+    
     # Set nomic-embed-text from ollama as embedding model
     # 768 dimensions and context window of 8192
     ollama_ef = OllamaEmbeddingFunction(
-        url = "http://ollama:11434/api/embeddings",
+        url = f"{OLLAMA_HOST}/api/embeddings",
         model_name="nomic-embed-text:latest",
     )
 
@@ -39,38 +52,32 @@ def get_vector_collection() -> chromadb.Collection:
         metadata={"hnsw:space": "cosine"},
     )
 
-def add_to_vector_collection(indexed_chunks: list[dict]):
+def add_to_vector_collection(indexed_chunks: dict):
     """Adds document splits to a vector collection for semantic search.
-
-    Takes a list of document splits and adds them to a ChromaDB vector collection
-    along with their metadata and unique IDs based on the filename.
-
     Args:
-        all_splits: List of Document objects containing text chunks and metadata
-
+        indexed_chunks: Dictionary containing file ID and list of Document objects
     Returns:
-        None. Displays a success message via Streamlit when complete.
-
-    Raises:
-        ChromaDBError: If there are issues upserting documents to the collection
+        int: Number of documents in collection after addition
     """
     collection = get_vector_collection()
     documents, metadatas, ids = [], [], []
-
+    
     try:
-        for file_name, chunks in indexed_chunks:
-            for idx, chunk in enumerate(chunks):
-                documents.append(chunk.page_content)
-                metadatas.append(chunk.metadata)
-                ids.append(f"{file_name}_{idx+1}")
-    except:
-        raise ValueError("Error vectorizing document chunks")
-
+        file_name = indexed_chunks['id']
+        for idx, chunk in enumerate(indexed_chunks['text']):
+            documents.append(chunk.page_content)
+            metadatas.append(chunk.metadata)
+            ids.append(f"{file_name}_{idx+1}")
+            
+    except Exception as e:
+        raise e
+        
     collection.upsert(
         documents=documents,
         metadatas=metadatas,
         ids=ids,
     )
+    
     return collection.count()
 
 def query_collection(prompt: str, n_results: int = 10):

@@ -17,7 +17,7 @@ def process_document(file):
     list_chunks = text_splitter.split_documents(docs)
     return list_chunks
 
-def load_documents_from_directory(data_dir_path: str):
+def process_directory_documents(data_dir_path: str):
     indexed_chunks = []
 
     # Check if the directory exists, creates if doesn't
@@ -38,16 +38,16 @@ def process_uploaded_document(uploaded_file: UploadedFile, data_dir_path: str) -
         uploaded_file: A Streamlit UploadedFile object containing the PDF file
 
     Returns:
-        A list of Document objects containing the chunked text from the PDF
+        A dictionary of Document objects containing the chunked text from the PDF
 
     Raises:
         IOError: If there are issues writing the file
         Error: If uploaded file already exists within the database
     """
-    normalized_file_name = uploaded_file.name.translate(
+    normalized_file_name = uploaded_file.name.replace(".pdf", "").translate(
                 str.maketrans({"-": "_", ".": "_", " ": "_"})
             )
-    new_file = open(f"{data_dir_path}/{normalized_file_name}.pdf", "w")
+    new_file = open(f"{data_dir_path}/{normalized_file_name}.pdf", "wb")
     new_file.write(uploaded_file.read())
 
     if not new_file:
@@ -55,5 +55,5 @@ def process_uploaded_document(uploaded_file: UploadedFile, data_dir_path: str) -
         return None
     else:
         list_doc_chunks = process_document(new_file)
-        indexed_chunk = [{"id": new_file.name, "text": list_doc_chunks}]
+        indexed_chunk = {"id": new_file.name, "text": list_doc_chunks}
         return indexed_chunk
