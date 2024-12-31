@@ -7,6 +7,19 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def process_document(file):
+    """
+    Processes a PDF document by loading its content and splitting it into text chunks.
+
+    This function uses the PyMuPDFLoader to load the content of a PDF file and then
+    splits the content into smaller text chunks using the RecursiveCharacterTextSplitter.
+    The text is split based on specified separators and chunk sizes.
+
+    Args:
+        file: A file object representing the PDF document to be processed.
+
+    Returns:
+        list: A list of text chunks obtained from the PDF document.
+    """
     loader = PyMuPDFLoader(file.name)
     docs = loader.load() 
     text_splitter = RecursiveCharacterTextSplitter(
@@ -18,6 +31,20 @@ def process_document(file):
     return list_chunks
 
 def process_directory_documents(data_dir_path: str):
+    """
+    Processes all PDF documents in a specified directory by converting them to text chunks.
+
+    This function checks if the specified directory exists and creates it if it doesn't.
+    It then iterates over all files in the directory, processing each PDF file by splitting
+    its content into text chunks.
+
+    Args:
+        data_dir_path (str): The path to the directory containing PDF files.
+
+    Returns:
+        list: A list of dictionaries, each containing the filename and its corresponding
+              text chunks.
+    """
     indexed_chunks = []
 
     # Check if the directory exists, creates if doesn't
@@ -50,10 +77,7 @@ def process_uploaded_document(uploaded_file: UploadedFile, data_dir_path: str) -
     new_file = open(f"{data_dir_path}/{normalized_file_name}.pdf", "wb")
     new_file.write(uploaded_file.read())
 
-    if not new_file:
-        str.Error("The uploaded file already exists in the database.")
-        return None
-    else:
-        list_doc_chunks = process_document(new_file)
-        indexed_chunk = {"id": new_file.name, "text": list_doc_chunks}
-        return indexed_chunk
+    list_doc_chunks = process_document(new_file)
+    indexed_chunk = {"id": new_file.name, "text": list_doc_chunks}
+    
+    return indexed_chunk
