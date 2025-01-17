@@ -4,9 +4,14 @@
 build:
 	docker compose build
 
-interactive: build
-	docker compose run --rm streamlit /bin/bash
+# interactive: build
+# 	docker compose run --rm streamlit /bin/bash
 
+interactive: 
+	docker build . -t sustainability-rag-app
+	docker run -it --entrypoint /bin/bash \
+	-v "$(shell pwd):/app/src" sustainability-rag-app
+	
 streamlit:
 	docker compose up -d && \
 	docker compose exec ollama ollama pull nomic-embed-text:latest && \
