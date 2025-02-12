@@ -24,7 +24,7 @@ Format your response as follows:
 Important: Base your entire response solely on the information provided in the context. Do not include any external knowledge or assumptions not present in the given text.
 """
 
-def call_llm(context: str, prompt: str):
+def call_llm(context: str, prompt: str, system_prompt: str = system_prompt):
     """Calls the language model with context and prompt to generate a response.
 
     Uses Ollama to stream responses from a language model by providing context and a

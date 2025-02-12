@@ -80,12 +80,12 @@ def add_to_vector_collection(indexed_chunks: dict):
     
     return collection.count()
 
-def query_collection(prompt: str, n_results: int = 10):
-    """Queries the vector collection with a given prompt to retrieve relevant documents.
+def query_collection(prompts: str | list[str], n_results: int = 10):
+    """Queries the vector collection with one or more prompts to retrieve relevant documents.
 
     Args:
-        prompt: The search query text to find relevant documents.
-        n_results: Maximum number of results to return. Defaults to 10.
+        prompts: Single query string or list of query strings
+        n_results: Maximum number of results to return per query. Defaults to 10.
 
     Returns:
         dict: Query results containing documents, distances and metadata from the collection.
@@ -94,5 +94,6 @@ def query_collection(prompt: str, n_results: int = 10):
         ChromaDBError: If there are issues querying the collection.
     """
     collection = get_vector_collection()
-    results = collection.query(query_texts=[prompt], n_results=n_results)
+    query_texts = [prompts] if isinstance(prompts, str) else prompts
+    results = collection.query(query_texts=query_texts, n_results=n_results)
     return results
