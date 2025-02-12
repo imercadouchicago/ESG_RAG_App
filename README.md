@@ -2,7 +2,7 @@
 
 ## Overview
 
-A RAG chatbot application for answering questions regarding corporate sustainability reports.
+A RAG chatbot application for answering questions regarding corporate sustainability reports. The RAG pipeline incorporates query augmentation, reciprocal rank fusion, and cross-encoder reranking to improve the accuracy of the chatbot's responses.
 
 ## Technology Stack
 - Python
@@ -20,11 +20,12 @@ ESG_RAG_App/
 ├── chromadb/
 ├── data/
 ├── rag_app/
-│   ├── generator.py
-│   ├── preprocessing.py
-│   ├── retriever.py
-│   ├── reranker.py
 │   ├── webscraper.js
+│   ├── preprocessing.py
+│   ├── fusion.py
+│   ├── retriever.py
+│   ├── reranking.py
+│   └── generator.py
 ├── app.py
 ├── docker-compose.yml
 ├── Dockerfile
@@ -55,7 +56,7 @@ ESG_RAG_App $ make streamlit
 
 ## Note
 
-This repository is currently under development. I am in the process of adapting the Playwright webscraper to scrape sustainability reports from the companies in the S&P 500 index and incorporating additional RAG techniques to improve the accuracy of the chatbot's responses.
+This repository is currently under development. I am in the process of adapting the Playwright webscraper to scrape sustainability reports from the companies in the S&P 500 index.
 
 ## Data Sources
 The sp500.csv file: 
