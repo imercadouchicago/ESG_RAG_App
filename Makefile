@@ -4,9 +4,6 @@
 build:
 	docker compose build
 
-# interactive: build
-# 	docker compose run --rm streamlit /bin/bash
-
 interactive: 
 	docker build . -t sustainability-rag-app
 	docker run -it --entrypoint /bin/bash \

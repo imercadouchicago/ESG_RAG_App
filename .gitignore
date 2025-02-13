@@ -1,2 +1,5 @@
 .DS_Store
 *.pyc
+
+/rag_app/downloads/*
+/rag_app/webscraper.log
