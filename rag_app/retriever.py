@@ -2,6 +2,7 @@ import os
 import requests
 import chromadb
 from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
+import streamlit as st
 
 OLLAMA_HOST = os.environ["OLLAMA_HOST"]
 
@@ -16,13 +17,13 @@ def get_vector_collection() -> chromadb.Collection:
         chromadb.Collection: A ChromaDB collection configured with the Ollama embedding
             function and cosine similarity space.
     """
-    # Test basic connectivity first
+    
     try:
+        # Test basic connectivity first
         response = requests.post(
             f"{OLLAMA_HOST}/api/embeddings",
             json={"model": "nomic-embed-text", "prompt": "test"}
         )
-        print(f"Raw API response: {response.text}")
         if not response.ok:
             raise ValueError(f"Ollama API error: {response.status_code} - {response.text}")
     except Exception as e:
@@ -40,11 +41,10 @@ def get_vector_collection() -> chromadb.Collection:
     except Exception as e:
         raise ValueError(f"Issue with embedding function: {e}")
 
-    # Vector database client with client in specified path
-    # Default database is SQLite
+    # Initialize ChromaDB client in specified path
     chroma_client = chromadb.PersistentClient(path = "./chromadb")
 
-    # Creating a collection (~table) called rag_app in the database
+    # Creating a collection in the database
     # Compares vectors in database based on cosine similarity
     return chroma_client.get_or_create_collection(
         name="document_collection" ,
@@ -52,32 +52,58 @@ def get_vector_collection() -> chromadb.Collection:
         metadata={"hnsw:space": "cosine"},
     )
 
-def add_to_vector_collection(indexed_chunks: dict):
-    """Adds document splits to a vector collection for semantic search.
+def add_to_vector_collection(indexed_chunks_list: list[dict]):
+    """Adds document splits from multiple files to a vector collection.
+
     Args:
-        indexed_chunks: Dictionary containing file ID and list of Document objects
+        indexed_chunks_list: A list of dictionaries, each containing 'id' (file ID)
+                             and 'text' (list of Document objects/chunks for that file).
     Returns:
-        int: Number of documents in collection after addition
+        int: Number of documents in collection after addition.
     """
     collection = get_vector_collection()
     documents, metadatas, ids = [], [], []
-    
+
+    # Calculate total number of chunks for progress bar
+    total_chunks = sum(len(item['text']) for item in indexed_chunks_list)
+    if total_chunks == 0:
+        st.warning("No text chunks found to add to the collection.")
+        return collection.count()
+
+    progress_bar = st.progress(0, text=f"Preparing {total_chunks} text chunks for embedding...")
+    chunks_processed = 0
+
     try:
-        file_name = indexed_chunks['id']
-        for idx, chunk in enumerate(indexed_chunks['text']):
-            documents.append(chunk.page_content)
-            metadatas.append(chunk.metadata)
-            ids.append(f"{file_name}_{idx+1}")
-            
+        for indexed_chunks in indexed_chunks_list:
+            file_name = indexed_chunks['id']
+            for idx, chunk in enumerate(indexed_chunks['text']):
+                documents.append(chunk.page_content)
+                metadatas.append(chunk.metadata)
+                # Using file_name and chunk index for ID
+                ids.append(f"{file_name}_{idx+1}")
+                chunks_processed += 1
+                progress_percentage = chunks_processed / total_chunks
+                progress_bar.progress(progress_percentage, text=f"Preparing chunk {chunks_processed}/{total_chunks}...")
+
     except Exception as e:
-        raise e
-        
-    collection.upsert(
-        documents=documents,
-        metadatas=metadatas,
-        ids=ids,
-    )
-    
+        st.error(f"Error preparing chunks for embedding: {e}")
+        return collection.count() # Return current count if preparation fails
+
+    # Ensure progress bar is at 100% before upserting
+    progress_bar.progress(1.0, text=f"Prepared {total_chunks} chunks. Upserting into collection...")
+
+    try:
+        collection.upsert(
+            documents=documents,
+            metadatas=metadatas,
+            ids=ids,
+        )
+        progress_bar.empty()
+        st.success(f"Successfully added {len(ids)} chunks to the vector collection.")
+    except Exception as e:
+        st.error(f"Error upserting documents into ChromaDB: {e}")
+        progress_bar.empty() # Clear progress bar even on error
+
     return collection.count()
 
 def query_collection(prompts: str | list[str], n_results: int = 10):

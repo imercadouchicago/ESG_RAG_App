@@ -2,7 +2,7 @@
 
 ## Overview
 
-A RAG chatbot application for answering questions regarding corporate sustainability reports. The RAG pipeline incorporates query augmentation, reciprocal rank fusion, and cross-encoder reranking to improve the accuracy of the chatbot's responses.
+A RAG chatbot application for answering questions regarding corporate sustainability reports. The RAG pipeline incorporates query augmentation, reciprocal rank fusion, and cross-encoder reranking to improve the accuracy of the chatbot's responses. The Playwright webscraper uses JavaScript to scrape sustainability reports for the companies in the S&P 500 index.
 
 ## Technology Stack
 - Python
@@ -12,6 +12,7 @@ A RAG chatbot application for answering questions regarding corporate sustainabi
 - Ollama
 - Langchain
 - ChromaDB
+- Playwright
 - A variety of Python packages
 
 ## Project Structure
@@ -19,8 +20,12 @@ A RAG chatbot application for answering questions regarding corporate sustainabi
 ESG_RAG_App/
 ├── chromadb/
 ├── data/
+│   └──SP500.csv
 ├── rag_app/
+│   ├── downloads/
 │   ├── webscraper.js
+│   ├── webscraper.log
+│   ├── webscraperCorrections.js
 │   ├── preprocessing.py
 │   ├── fusion.py
 │   ├── retriever.py
@@ -54,9 +59,16 @@ cd ESG_RAG_App
 ESG_RAG_App $ make streamlit
 ```
 
+## Interacting with the Docker Container
+
+```bash
+cd ESG_RAG_App
+ESG_RAG_App $ make interactive
+```
+
 ## Note
 
-This repository is currently under development. I am in the process of adapting the Playwright webscraper to scrape sustainability reports from the companies in the S&P 500 index.
+The webscraper successfully scrapes 3,081 sustainability reports associated with 434 of the S&P 500 companies. Files in project structure diagram are in order of execution.
 
 ## Data Sources
 The sp500.csv file: 

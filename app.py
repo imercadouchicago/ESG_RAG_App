@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 
-from rag_app.preprocessing import process_uploaded_document
+from rag_app.preprocessing import process_uploaded_document, embed_downloaded_files
 from rag_app.retriever import add_to_vector_collection, query_collection
 from rag_app.fusion import query_augmentation, reciprocal_rank_fusion
 from rag_app.reranking import re_rank_cross_encoders
@@ -12,10 +12,19 @@ DATA_DIR_PATH = os.environ["DATA_DIR_PATH"]
 # Document Upload Area
 with st.sidebar:
     st.set_page_config(page_title="Sustainability Reports Chatbot")
-    uploaded_file = st.file_uploader("Choose a file", type=["pdf"], accept_multiple_files=False)
-    process = st.button("Process")
+    st.header("Populating Vector Database")
 
-    if uploaded_file and process:
+    st.subheader("Processing Downloads Directory")
+    embed_files = st.button("Embed Files")
+    if embed_files:
+        collection_count = embed_downloaded_files()
+        st.success(f"Data added to vector database! Collection size: {collection_count}")
+
+    st.subheader("Processing Uploaded Files")
+    uploaded_file = st.file_uploader("Choose a file", type=["pdf"], accept_multiple_files=False)
+    process_upload = st.button("Process")
+
+    if uploaded_file and process_upload:
         indexed_chunk = process_uploaded_document(uploaded_file, DATA_DIR_PATH)
         count = add_to_vector_collection(indexed_chunk)
         st.success(f"Data added to vector database! Collection size: {count}")
