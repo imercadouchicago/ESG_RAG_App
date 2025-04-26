@@ -2,19 +2,22 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const csv = require('csv-parser');
 const path = require('path');
+const Fuse = require('fuse.js');
 
 // Define the log file path
 const logFilePath = path.join(__dirname, 'webscraper.log');
 
 // Function to log messages
 function logMessage(message) {
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
     const logEntry = `[${timestamp}] ${message}\n`;
     
     // Append the log message to the file
     fs.appendFileSync(logFilePath, logEntry);
 }
 
+// Function to search for tickers
+let processedFilesCount = 0;
 async function searchTickers() {
   const browser = await chromium.launch({headless: true});
   const context = await browser.newContext({acceptDownloads: true});
@@ -27,7 +30,7 @@ async function searchTickers() {
       const results = [];
       fs.createReadStream('data/SP500.csv')
         .pipe(csv({columns: true}))
-        .on('data', (row) => {results.push(row.Symbol);})
+        .on('data', (row) => {results.push([row.Symbol, row.Shortname]);})
         .on('end', () => {resolve(results);})
         .on('error', (error) => {reject(error);});
     });
@@ -41,9 +44,10 @@ async function searchTickers() {
     }
 
     // Process each ticker
-    for (const ticker of tickers) {
+    for (const [ticker, companyName] of tickers) {
       try {
-        logMessage(`Processing ticker: ${ticker}`);
+
+        logMessage(`Processing ticker - company: ${ticker} - ${companyName}`);
         // Navigate to the website
         await page.goto('https://responsibilityreports.com', {waitUntil: 'networkidle'});
 
@@ -64,10 +68,41 @@ async function searchTickers() {
         // Wait for search results page to load
         await page.waitForLoadState('networkidle');
 
-        // Wait for and click the company name link
+        // Wait for and aggregate list of search results
         await page.waitForSelector('span.companyName a');
-        await page.click('span.companyName a');
-        logMessage("Company name link found and clicked.");
+        const listCompanies = await page.$$eval('span.companyName a', elements => elements.map(el => el.textContent));
+        logMessage(`Found ${listCompanies.length} companies in search results.`);
+        logMessage('Company list: ' + listCompanies.join(', '));
+
+        // Fuzzy search for company name in list of search results
+        const fuse = new Fuse(listCompanies);
+        const result = fuse.search(companyName);
+
+        // Check if fuzzy search returned any results
+        if (result.length === 0) {
+          logMessage(`Error: No matching company found for ${ticker}.`);
+          continue; // Skip to the next ticker
+        }
+
+        const nameMatch = result[0].item;
+
+        // Find the link element handle corresponding to the matched name
+        // Need to get the handles again to click the correct one
+        const companyElementHandles = await page.$$('span.companyName a');
+        let companyNameLinkHandle = null;
+        for (const handle of companyElementHandles) {
+            const text = await handle.evaluate(el => el.textContent);
+            if (text === nameMatch) {
+                companyNameLinkHandle = handle;
+                break;
+            }
+        }
+        await companyNameLinkHandle.click();
+        logMessage(`Found and clicked company name: ${nameMatch}.`);
+
+        // Dispose of element handles to free up resources
+        await Promise.all(companyElementHandles.map(h => h.dispose()));
+        await companyNameLinkHandle.dispose(); // Dispose the clicked handle too
 
         // Wait for the company page to load
         await page.waitForLoadState('networkidle');
@@ -123,6 +158,7 @@ async function searchTickers() {
             // Save downloaded file to data directory
             await download.saveAs(filePath);
             logMessage(`Successfully downloaded: ${suggestedFilename} for ${ticker}`);
+            processedFilesCount++;
             
             // Wait briefly between downloads
             await page.waitForTimeout(1000);
@@ -150,10 +186,9 @@ async function searchTickers() {
   } finally {
     // Close the browser
     await browser.close();
+    logMessage(`Number of files in downloads directory: ${processedFilesCount}`);
   }
 }
 
 // Run the script
 searchTickers().catch(console.error);
-const fileCount = fs.readdirSync(downloadDir).length;
-logMessage(`Number of files in downloads directory: ${fileCount}`);

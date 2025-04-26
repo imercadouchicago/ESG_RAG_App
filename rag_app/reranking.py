@@ -1,4 +1,3 @@
-
 from sentence_transformers import CrossEncoder
 
 def re_rank_cross_encoders(documents: list[str], prompt) -> tuple[str, list[int]]:

@@ -1,4 +1,3 @@
-
 import ollama
 
 system_prompt = """

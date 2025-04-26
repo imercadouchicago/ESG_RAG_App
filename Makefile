@@ -10,7 +10,7 @@ interactive:
 	-v "$(shell pwd):/app/src" sustainability-rag-app
 	
 streamlit:
-	docker compose up -d && \
+	docker compose up && \
 	docker compose exec ollama ollama pull nomic-embed-text:latest && \
 	docker compose exec ollama ollama pull llama3.2:3b
 

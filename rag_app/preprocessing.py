@@ -1,10 +1,12 @@
 import os
 import streamlit as st
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import warnings
+
+from rag_app.retriever import add_to_vector_collection
 
 def process_document(file):
     """
@@ -20,8 +22,14 @@ def process_document(file):
     Returns:
         list: A list of text chunks obtained from the PDF document.
     """
-    loader = PyMuPDFLoader(file.name)
-    docs = loader.load() 
+    loader = PyMuPDFLoader(file)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            category=UserWarning,
+            message=".*Empty content on page.*"
+        )
+        docs = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=400,
         chunk_overlap=100,
@@ -36,7 +44,7 @@ def process_directory_documents(data_dir_path: str):
 
     This function checks if the specified directory exists and creates it if it doesn't.
     It then iterates over all files in the directory, processing each PDF file by splitting
-    its content into text chunks.
+    its content into text chunks and displays a progress bar.
 
     Args:
         data_dir_path (str): The path to the directory containing PDF files.
@@ -46,13 +54,25 @@ def process_directory_documents(data_dir_path: str):
               text chunks.
     """
     indexed_chunks = []
-
-    # Check if the directory exists, creates if doesn't
     os.makedirs(os.path.dirname(data_dir_path), exist_ok=True)
-    for filename in os.listdir(data_dir_path):
-        if filename.endswith(".pdf"):
-            file_chunks = process_document(filename)
+    pdf_files = [f for f in os.listdir(data_dir_path) if f.endswith(".pdf")]
+    total_files = len(pdf_files)
+
+    progress_bar = st.progress(0, text=f"Processing {total_files} documents...")
+
+    for i, filename in enumerate(pdf_files):
+        file_path = os.path.join(data_dir_path, filename)
+        try:
+            file_chunks = process_document(file_path)
             indexed_chunks.append({"id": filename, "text": file_chunks})
+            progress_percentage = (i + 1) / total_files
+            progress_bar.progress(progress_percentage, text=f"Processing {filename} ({i+1}/{total_files})...")
+        except Exception as e:
+            st.error(f"Error processing {filename}: {e}")
+
+    # Ensure progress bar reaches 100%
+    progress_bar.progress(1.0, text=f"Processed {total_files} documents.")
+
     return indexed_chunks
 
 def process_uploaded_document(uploaded_file: UploadedFile, data_dir_path: str) -> list[Document]:
@@ -81,3 +101,19 @@ def process_uploaded_document(uploaded_file: UploadedFile, data_dir_path: str) -
     indexed_chunk = {"id": new_file.name, "text": list_doc_chunks}
     
     return indexed_chunk
+
+def embed_downloaded_files():
+    """
+    Processes and embeds downloaded files using the Ollama embedding function.
+    """
+    with st.spinner("Processing downloaded documents..."):
+        indexed_chunks = process_directory_documents("./rag_app/downloads")
+
+    if not indexed_chunks:
+        st.warning("No PDF documents found in the downloads directory to process.")
+        return 0
+
+    with st.spinner("Adding documents to vector collection..."):
+        collection_count = add_to_vector_collection(indexed_chunks)
+
+    return collection_count

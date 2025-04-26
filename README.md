@@ -23,9 +23,9 @@ ESG_RAG_App/
 │   └──SP500.csv
 ├── rag_app/
 │   ├── downloads/
-│   ├── calculation.js
 │   ├── webscraper.js
 │   ├── webscraper.log
+│   ├── webscraperCorrections.js
 │   ├── preprocessing.py
 │   ├── fusion.py
 │   ├── retriever.py
@@ -68,7 +68,7 @@ ESG_RAG_App $ make interactive
 
 ## Note
 
-This repository is currently under development. I am in the process of increasing webscraper efficiency and accuracy. Currently, the webscraper is able to scrape 2,695 sustainability reports for 446 of the companies in the S&P 500 index.
+The webscraper successfully scrapes 3,081 sustainability reports associated with 434 of the S&P 500 companies. Files in project structure diagram are in order of execution.
 
 ## Data Sources
 The sp500.csv file: 
