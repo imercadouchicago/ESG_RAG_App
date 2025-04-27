@@ -82,16 +82,16 @@ def add_to_vector_collection(indexed_chunks_list: list[dict]):
                 # Using file_name and chunk index for ID
                 ids.append(f"{file_name}_{idx+1}")
                 chunks_processed += 1
+                if chunks_processed < 5:
+                    st.write(f"Document: {chunk.page_content}, ID: {ids[-1]}")
                 progress_percentage = chunks_processed / total_chunks
                 progress_bar.progress(progress_percentage, text=f"Preparing chunk {chunks_processed}/{total_chunks}...")
-
     except Exception as e:
         st.error(f"Error preparing chunks for embedding: {e}")
         return collection.count() # Return current count if preparation fails
 
     # Ensure progress bar is at 100% before upserting
     progress_bar.progress(1.0, text=f"Prepared {total_chunks} chunks. Upserting into collection...")
-
     try:
         collection.upsert(
             documents=documents,
@@ -103,7 +103,6 @@ def add_to_vector_collection(indexed_chunks_list: list[dict]):
     except Exception as e:
         st.error(f"Error upserting documents into ChromaDB: {e}")
         progress_bar.empty() # Clear progress bar even on error
-
     return collection.count()
 
 def query_collection(prompts: str | list[str], n_results: int = 10):
@@ -123,3 +122,44 @@ def query_collection(prompts: str | list[str], n_results: int = 10):
     query_texts = [prompts] if isinstance(prompts, str) else prompts
     results = collection.query(query_texts=query_texts, n_results=n_results)
     return results
+
+def check_collection_stats():
+    """Checks the number of documents in the collection and extracts 3 examples.
+
+    Returns:
+        tuple: (count of documents, list of 3 example documents) or (count, None) if error.
+    """
+    try:
+        collection = get_vector_collection()
+        collection_count = collection.count()
+
+        # Extract up to 3 examples if the collection is not empty
+        if collection_count > 0:
+            results = collection.get(
+                limit=min(3, collection_count),
+                include=["documents", "metadatas"]
+            )
+
+            examples = []
+            if results and results.get("documents"):
+                for i in range(len(results["documents"])):
+                    doc_text = results["documents"][i]
+                    doc_id = results["ids"][i] if results.get("ids") else f"Document {i+1}"
+                    metadata = results["metadatas"][i] if results.get("metadatas") else {}
+
+                    examples.append({
+                        "id": doc_id,
+                        "text": doc_text[:150] + "..." if len(doc_text) > 150 else doc_text,  # Show first 150 chars
+                        "metadata": metadata
+                    })
+                return collection_count, examples
+            else:
+                # Handle case where get() returns empty or unexpected results
+                st.warning("Could not retrieve example documents from the collection.")
+                return collection_count, []
+        else:
+            # Collection is empty
+            return collection_count, []
+    except Exception as e:
+        st.error(f"Error checking collection stats: {e}")
+        return 0, None

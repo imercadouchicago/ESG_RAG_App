@@ -97,8 +97,8 @@ def process_uploaded_document(uploaded_file: UploadedFile, data_dir_path: str) -
     new_file = open(f"{data_dir_path}/{normalized_file_name}.pdf", "wb")
     new_file.write(uploaded_file.read())
 
-    list_doc_chunks = process_document(new_file)
-    indexed_chunk = {"id": new_file.name, "text": list_doc_chunks}
+    list_doc_chunks = process_document(new_file.name)
+    indexed_chunk = [{"id": new_file.name, "text": list_doc_chunks}]
     
     return indexed_chunk
 

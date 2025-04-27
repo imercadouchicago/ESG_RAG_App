@@ -2,7 +2,7 @@ import os
 import streamlit as st
 
 from rag_app.preprocessing import process_uploaded_document, embed_downloaded_files
-from rag_app.retriever import add_to_vector_collection, query_collection
+from rag_app.retriever import add_to_vector_collection, query_collection, check_collection_stats
 from rag_app.fusion import query_augmentation, reciprocal_rank_fusion
 from rag_app.reranking import re_rank_cross_encoders
 from rag_app.generator import call_llm
@@ -29,6 +29,15 @@ with st.sidebar:
         count = add_to_vector_collection(indexed_chunk)
         st.success(f"Data added to vector database! Collection size: {count}")
 
+    st.subheader("Check Vector Database Stats")
+    verify_db = st.button("Verify")
+    if verify_db:
+        results = check_collection_stats()
+        st.write(results)
+        # collection_count, examples = check_collection_stats()
+        # st.success(f"Collection size: {collection_count}")
+        # st.write(examples)
+
 # Question and Answer Area
 st.header("Sustainability Reports Chatbot")
 prompt = st.text_area("Ask a question related to corporate sustainability reports!")
@@ -41,13 +50,11 @@ if ask and prompt:
     # Detailed Status Section
     with st.expander("See processing status", expanded=True):
         status_placeholder = st.empty()
+        status_messages = []
         
         def update_status(message):
-            current_status = status_placeholder.text
-            if current_status:
-                status_placeholder.text(f"{current_status}\n{message}")
-            else:
-                status_placeholder.text(message)
+            status_messages.append(message)
+            status_placeholder.text("\n".join(status_messages))
     
     # Update main status and detailed status
     status_container.info("Processing your query...")
